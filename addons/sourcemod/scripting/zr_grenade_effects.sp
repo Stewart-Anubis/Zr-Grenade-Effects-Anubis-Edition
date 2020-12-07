@@ -429,6 +429,7 @@ bool:Freeze(client, attacker, &Float:time)
 	{
 		KillTimer(h_freeze_timer[client]);
 		h_freeze_timer[client] = INVALID_HANDLE;
+		UnFreeze(client);
 	}
 
 	SetEntityMoveType(client, MOVETYPE_NONE);
