@@ -4,11 +4,11 @@
 
 * This plugin is an updated version of FrozDark (HLModders.ru LLC) plugin, under a new author.
 
-* Test & Compile, SouceMod 1.10.0-6490
+* Test & Compile, SouceMod 1.10.0-6492
 * Sorry for my English.
 
 * Author FrozDark, FrozDark, Franc1sco franug, Anubis Edition
-* Version = 2.3.4-A, Anubis edition
+* Version = 2.3.4-B, Anubis edition
 
 ### Decription: Zr-Grenade-Effects-Anubis-Edition
 
@@ -19,6 +19,7 @@ Changes he grenades to napalm grenades, smoke grenades to freeze grenades and fl
 * Adding zombie freezing sounds
 * Adding Ice Cube model
 * Adding snow after freezing
+* No need to use zombie speed limiting plugin when it is on fire.
 
 ### Server ConVars
 
@@ -37,6 +38,7 @@ Changes he grenades to napalm grenades, smoke grenades to freeze grenades and fl
 * zr_greneffect_flash_light_duration - The light duration in seconds
 * zr_greneffect_sound_freeze_enable - Enable sound freeze.
 * zr_greneffect_sound_unfreeze_enable - Enable sound unfreeze.
+* zr_greneffect_fire_Movement_Speed - Speed Applied to the zombie on fire.
 
 ![alt text](https://i.ibb.co/R4g9ckh/20201117214107-1.jpg)
 ![alt text](https://i.ibb.co/KXf8Bzh/20201117214116-1.jpg)

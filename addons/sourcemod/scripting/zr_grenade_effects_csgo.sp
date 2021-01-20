@@ -22,9 +22,10 @@
 #include <sdkhooks>
 
 #include <zombiereloaded>
+#include <zr_tools>
 #pragma newdecls required
 
-#define PLUGIN_VERSION "2.3.4-A"
+#define PLUGIN_VERSION "2.3.4-B"
 
 #define FLASH 0
 #define SMOKE 1
@@ -64,6 +65,7 @@ ConVar g_Cvar_greneffects_flash_light_distance = null;
 ConVar g_Cvar_greneffects_flash_light_duration = null;
 ConVar g_Cvar_greneffects_sound_freeze_enable = null;
 ConVar g_Cvar_greneffects_sound_unfreeze_enable = null;
+ConVar g_Cvar_greneffects_fire_Movement_Speed = null;
 
 bool b_enable = false;
 bool b_trails = false;
@@ -82,6 +84,7 @@ float f_smoke_freeze_distance;
 float f_smoke_freeze_duration;
 float f_flash_light_distance;
 float f_flash_light_duration;
+float f_fire_Movement_Speed;
 
 Handle h_freeze_timer[MAXPLAYERS+1];
 
@@ -90,6 +93,7 @@ Handle h_fwdOnClientFreezed;
 Handle h_fwdOnClientIgnite;
 Handle h_fwdOnClientIgnited;
 Handle h_fwdOnGrenadeEffect;
+Handle h_timers_slow[MAXPLAYERS + 1] = INVALID_HANDLE;
 
 public Plugin myinfo = 
 {
@@ -134,6 +138,7 @@ public void OnPluginStart()
 	
 	g_Cvar_greneffects_sound_freeze_enable = CreateConVar("zr_greneffect_sound_freeze_enable", "1", "Enable sound freeze.", 0, true, 0.0, true, 1.0);
 	g_Cvar_greneffects_sound_unfreeze_enable = CreateConVar("zr_greneffect_sound_unfreeze_enable", "1", "Enable sound unfreeze.", 0, true, 0.0, true, 1.0);
+	g_Cvar_greneffects_fire_Movement_Speed = CreateConVar("zr_greneffect_fire_Movement_Speed", "0.6", "Speed Applied to the zombie on fire.", 0, true, 1.0);
 
 	b_enable = g_Cvar_greneffects_enable.BoolValue;
 	b_trails = g_Cvar_greneffects_trails.BoolValue;
@@ -149,6 +154,7 @@ public void OnPluginStart()
 	f_flash_light_duration = g_Cvar_greneffects_flash_light_duration.FloatValue;
 	b_snow_sound_freeze = g_Cvar_greneffects_sound_freeze_enable.BoolValue;
 	b_snow_sound_unfreeze = g_Cvar_greneffects_sound_unfreeze_enable.BoolValue;
+	f_fire_Movement_Speed = g_Cvar_greneffects_fire_Movement_Speed.FloatValue;
 
 	g_Cvar_greneffects_enable.AddChangeHook(OnConVarChanged);
 	g_Cvar_greneffects_trails.AddChangeHook(OnConVarChanged);
@@ -175,6 +181,14 @@ public void OnPluginStart()
 	HookEvent("hegrenade_detonate", OnHeDetonate);
 
 	AddNormalSoundHook(NormalSHook);
+
+	for(int i = 1; i <= MaxClients; i++)
+	{	
+		if(IsClientInGame(i))
+		{
+			OnClientPutInServer(i);
+		}
+	}
 }
 
 public void OnConVarChanged(ConVar CVar, const char[] oldVal, const char[] newVal)
@@ -193,6 +207,7 @@ public void OnConVarChanged(ConVar CVar, const char[] oldVal, const char[] newVa
 	f_flash_light_duration = g_Cvar_greneffects_flash_light_duration.FloatValue;
 	b_snow_sound_freeze = g_Cvar_greneffects_sound_freeze_enable.BoolValue;
 	b_snow_sound_unfreeze = g_Cvar_greneffects_sound_unfreeze_enable.BoolValue;
+	f_fire_Movement_Speed = g_Cvar_greneffects_fire_Movement_Speed.FloatValue;
 }
 
 public void OnMapStart()
@@ -232,6 +247,37 @@ public void OnClientDisconnect(int client)
 	}
 	b_icecube_active[client] = false;
 	b_snow_active[client] = false;
+
+	if (h_timers_slow[client] != INVALID_HANDLE)
+    {
+		KillTimer(h_timers_slow[client]);
+		h_timers_slow[client] = INVALID_HANDLE;
+	}
+}
+
+public void OnClientPutInServer(int client)
+{
+	SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
+}
+
+public Action OnTakeDamage(int client, int &attacker, int &inflictor, float &damage, int &damagetype)
+{
+	if(damagetype & DMG_BURN && IsPlayerAlive(client) && ZR_IsClientZombie(client))
+	{
+		if (h_timers_slow[client] == INVALID_HANDLE)
+		{
+			SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", f_fire_Movement_Speed);
+			h_timers_slow[client] = CreateTimer(0.3, StopMovementSlow, client);
+		}
+		else
+		{
+			KillTimer(h_timers_slow[client]);
+			h_timers_slow[client] = INVALID_HANDLE;
+		
+			SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", f_fire_Movement_Speed);
+			h_timers_slow[client] = CreateTimer(0.3, StopMovementSlow, client);
+		}
+	}
 }
 
 public Action OnRoundEvent(Handle event, char[] name, bool dontBroadcast)
@@ -311,6 +357,16 @@ public Action OnPlayerHurt(Handle event, char[] name, bool dontBroadcast)
 public Action OnPlayerDeath(Handle event, char[] name, bool dontBroadcast)
 {
 	OnClientDisconnect(GetClientOfUserId(GetEventInt(event, "userid")));
+}
+
+public Action StopMovementSlow(Handle timer, any client)
+{
+	h_timers_slow[client] = INVALID_HANDLE;
+	if(IsClientInGame(client) && IsPlayerAlive(client))
+	{
+		float velocidad = ZRT_GetClientAttributeValueFloat(client, "speed", 300.0);
+		SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", velocidad/300.0);
+	}
 }
 
 public Action OnHeDetonate(Handle event, char[] name, bool dontBroadcast) 
